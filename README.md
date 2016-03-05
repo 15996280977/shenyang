@@ -1,2 +1,0 @@
-# shenyang
-my first repository
