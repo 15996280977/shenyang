@@ -1,6 +1,7 @@
 #include<stdio.h> 
 #include<stdlib.h> 
-#include<string.h> 
+#include<string.h>
+#include<time.h> 
 
 #define MAX 2/*车库容量*/ 
 #define price 0.05 /*每车每分钟费用*/ 
@@ -34,6 +35,9 @@ int Arrival(SeqStackCar *,LinkQueueCar *); /*车辆到达*/
 void Leave(SeqStackCar *,SeqStackCar *,LinkQueueCar *); /*车辆离开*/ 
 void List(SeqStackCar,LinkQueueCar); /*显示存车信息*/
 int check(char *ps); 
+void WRITE();
+void READ();
+FILE *fp2;
 
 
 void main() 
@@ -44,21 +48,23 @@ void main()
 	char str[10];
 	int b=0;
     int a;
-	printf("请输入口令登录：（以#号键结束，输错3次后将关闭）：");
+	printf("请输入口令登录：（以#号键结束，输错4次后将关闭）：");
     while((str[b]=getchar())!='#')
 	{
 		b++;
 	}
 	str[b]='\0';
-        getchar();
+        
 	if(check(str))
 		printf("验证通过！\n");
 	else
 	{
 		printf("验证错误！\n");
-	for(a=2;a>=0;a--)
+	for(a=3;a>0;a--)
 	{   
 		b=0;
+		getchar();
+
 		printf("请输入口令进行登录：（以#号键结束，剩余%d次机会）：",a);
 		while((str[b]=getchar())!='#')
 	{
@@ -76,6 +82,9 @@ void main()
 	}
 	}
 	}
+      if(!check(str))
+           exit(0);
+
     system("cls");
     InitStack(&Enter); /*初始化车站*/ 
     InitStack(&Temp); /*初始化让路的临时栈*/ 
@@ -132,8 +141,14 @@ int InitQueue(LinkQueueCar *Q) /*初始化便道*/
 void PRINT(CarNode *p,int room) /*打印出站车的信息*/ 
 { 
     int A1,A2,B1,B2; 
-    printf("\nplease input thedepart time:/**:**/"); 
-    scanf("%d:%d",&(p->leave.hour),&(p->leave.min)); 
+    struct tm *local;
+	long m;
+	time(&m);
+	local = localtime(&m);
+	local->tm_year = local->tm_year + 1900;
+	local->tm_mon ++;
+    p->leave.hour=local->tm_hour;
+	p->leave.min=local->tm_min; 
     printf("\nthe number of the car:"); 
     puts(p->num); 
 	printf("the size of car is %s",p->size);
@@ -153,20 +168,33 @@ int Arrival(SeqStackCar *Enter,LinkQueueCar *W) /*车辆到达*/
 	char ch;
     CarNode *p; 
     QueueNode *t; 
+    struct tm *local;
+	long m;
+	time(&m);
+	local = localtime(&m);
+	local->tm_year = local->tm_year + 1900;
+	local->tm_mon ++;
     p=(CarNode *)malloc(sizeof(CarNode)); 
-    flushall(); 
+    flushall();
+	READ();
 	if(Enter->top<MAX)/*车场未满，车进车场*/
 	{
+        fp2=fopen("D:\\test.txt","ab+");
+		
     printf("\ninput the number of the car(例:陕A1234):"); 
-    gets(p->num); 
+    gets(p->num); 	fwrite(p,sizeof(p),1,fp2); WRITE();
+    fp2=fopen("D:\\test.txt","a+");
 	printf("input the size of the car(大|中|小):");
-	gets(p->size);
+	gets(p->size);	fwrite(p,sizeof(p),1,fp2); WRITE();
     Enter->top++; 
-    printf("\nthe place of the car.",Enter->top); 
-    printf("\nthe time thecar arrive:/**:**/"); 
-    scanf("%d:%d",&(p->reach.hour),&(p->reach.min)); 
-    Enter->stack[Enter->top]=p; 
+    printf("\n",Enter->top); 
+    p->reach.hour=local->tm_hour;
+    p->reach.min=local->tm_min; 
+    Enter->stack[Enter->top]=p;
+	fwrite(p,sizeof(p),1,fp2);
+		fclose(fp2);
     return(1); 
+     WRITE();
 	} 
     else /*车场已满，车进便道*/ 
 	{
@@ -188,9 +216,15 @@ int Arrival(SeqStackCar *Enter,LinkQueueCar *W) /*车辆到达*/
  
 void Leave(SeqStackCar *Enter,SeqStackCar *Temp,LinkQueueCar *W) /*车辆离开*/ 
 { 
-    int i, room; 
+    int  room; 
     CarNode *p,*t; 
     QueueNode *q; /*判断车场内是否有车*/
+    struct tm *local;
+	long m;
+	time(&m);
+	local = localtime(&m);
+	local->tm_year = local->tm_year + 1900;
+	local->tm_mon ++;
     if(Enter->top>0) /*有车*/ 
 	{ 
          while(1) /*输入离开车辆的信息*/ 
@@ -224,8 +258,7 @@ void Leave(SeqStackCar *Enter,SeqStackCar *Temp,LinkQueueCar *W) /*车辆离开*/
               t=q->data; 
               Enter->top++; 
               printf("\n便道的%s号车进入车场第%d位置.",t->num,Enter->top); 
-              printf("\n请输入现在的时间/**:**/:"); 
-              scanf("%d:%d",&(t->reach.hour),&(t->reach.min)); 
+              t->reach.hour=local->tm_hour,t->reach.min=local->tm_min; 
               W->head->next=q->next; 
               if(q==W->rear) 
 				  W->rear=W->head; 
@@ -300,4 +333,31 @@ int check(char *ps)
 	if(b!=6)
 		flag=0;
 	return flag;
+}
+
+void WRITE()
+{   
+	int n=0;
+	FILE *fp2;
+	if((fp2=fopen("D:\\test.txt","w"))==NULL)
+	{
+		printf("无法创建文件!\n");
+		getchar();
+		return;  
+	} 
+	fprintf(fp2,"%d",n);
+	fclose(fp2);
+} 
+
+void READ()
+{
+	int n=0;
+	if((fp2=fopen("D:\\test.txt","rb"))==NULL)
+	{
+		printf("无法打开文件!\n\n");
+		getchar();
+		return;
+	}
+	fscanf(fp2,"%d",&n);
+	fclose(fp2);
 }
